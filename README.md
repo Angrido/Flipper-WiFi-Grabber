@@ -12,7 +12,7 @@ A BadUSB payload written in DuckyScript that extracts stored WiFi credentials fr
 
 ## ⚡ Features
 
-- 🔄 Quick execution (completes in seconds)
+- 🔄 Quick execution
 - 🔑 Extracts all stored WiFi passwords
 - 📤 Exfiltrates data via Discord
 - 💨 Auto-closes after completion
