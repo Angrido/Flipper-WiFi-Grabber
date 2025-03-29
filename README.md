@@ -26,7 +26,7 @@ A BadUSB payload written in DuckyScript that extracts stored WiFi credentials fr
 
 ## 📲 Installation
 
-1. Download the `wifi_grabber.txt`
+1. Download the `WiFiGrabber.txt`
 2. Replace `YOUR_DISCORD_WEBHOOK` with your webhook URL
 3. Copy to Flipper Zero's BadUSB folder
 4. Execute on target system
