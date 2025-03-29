@@ -1,37 +1,47 @@
-# 🔑 Flipper Zero - WiFi Password Grabber
+# 🔑 Flipper Zero BadUSB Payload - WiFi Password Grabber
 
-> [!IMPORTANT]
-> Use responsibly and ethically
+> [!NOTE]  
+> This is a BadUSB payload for the Flipper Zero device
 
-## ⚠️ Disclaimer
-
-This tool is intended for educational purposes only. Any use of this code should comply with local laws and regulations. For any functionality not covered by standard practices, please refer to official documentation.
-
-> [!WARNING]
-> Only use on systems you own or have permission to test
+> [!IMPORTANT]  
+> For penetration testing and security research only
 
 ## 📝 Description
 
-A Windows-based tool designed to extract stored WiFi network credentials. The script automatically scans for saved wireless network profiles and retrieves their associated passwords.
+A BadUSB payload written in DuckyScript that extracts stored WiFi credentials from Windows machines. When executed, this payload launches PowerShell with elevated privileges to retrieve all saved wireless network profiles and their passwords, sending the data through Discord webhook.
 
 ## ⚡ Features
 
-- 🔍 Automatic scanning of saved WiFi profiles
-- 📱 SSID and password extraction
-- 💾 Formatted output of results
-- 🚀 Quick PowerShell execution
-- 📤 Discord webhook integration
+- 🔄 Quick execution (completes in seconds)
+- 🔑 Extracts all stored WiFi passwords
+- 📤 Exfiltrates data via Discord
+- 💨 Auto-closes after completion
 
 ## 🛠️ Requirements
 
-- Windows Operating System
-- PowerShell
-- Active internet connection
-- Configured Discord webhook
+- Target: Windows
+- Flipper Zero with BadUSB
+- Discord webhook URL
+- Internet connection on target
 
-## 🚀 Usage
+## 📲 Installation
 
-1. Script will automatically:
-   - Scan WiFi profiles
-   - Extract passwords
-   - Send results to webhook
+1. Download the `wifi_grabber.txt`
+2. Replace `YOUR_DISCORD_WEBHOOK` with your webhook URL
+3. Copy to Flipper Zero's BadUSB folder
+4. Execute on target system
+
+## 🎯 Execution Flow
+
+1. Launches PowerShell
+2. Extracts WiFi credentials
+3. Formats data into readable output
+4. Sends to Discord webhook
+5. Cleans up and exits
+
+## ⚠️ Disclaimer
+
+This payload is for **authorized penetration testing and educational purposes only**. Unauthorized use on systems you don't own is illegal. The author assumes no liability for misuse.
+
+---
+*Created for security research and educational purposes* 
