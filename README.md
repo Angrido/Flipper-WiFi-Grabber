@@ -35,7 +35,3 @@ A Windows-based tool designed to extract stored WiFi network credentials. The sc
    - Scan WiFi profiles
    - Extract passwords
    - Send results to webhook
----
-*⭐ If you find this project useful, please consider giving it a star!*
-
-You can add emojis using `:emoji_name:` syntax in your markdown 
