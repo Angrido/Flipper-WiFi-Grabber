@@ -10,7 +10,7 @@
 
 ## 📝 Description
 
-A BadUSB payload that extracts stored WiFi credentials from Windows machines. When executed, this payload launches PowerShell with elevated privileges to retrieve all saved wireless network profiles and their passwords, sending the data through Discord webhook.
+A BadUSB payload that extracts stored WiFi credentials from Windows machines. When executed, this payload launches PowerShell to retrieve all saved wireless network profiles and their passwords, sending the data through Discord webhook.
 
 ## ⚡ Features
 
